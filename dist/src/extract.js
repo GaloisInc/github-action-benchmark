@@ -19,7 +19,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.extractResult = void 0;
+exports.extractSingleResult = exports.extractResult = void 0;
 /* eslint-disable @typescript-eslint/naming-convention */
 const fs_1 = require("fs");
 const github = __importStar(require("@actions/github"));
@@ -414,8 +414,22 @@ function extractLuauBenchmarkResult(output) {
     return results;
 }
 async function extractResult(config) {
-    const output = await fs_1.promises.readFile(config.outputFilePath, 'utf8');
     const { tool, githubToken, ref } = config;
+    const benches = {};
+    for (const key in config.outputFilePath) {
+        benches[key] = await extractSingleResult(tool, config.outputFilePath[key]);
+    }
+    const commit = await getCommit(githubToken, ref);
+    return {
+        commit,
+        date: Date.now(),
+        tool,
+        benches,
+    };
+}
+exports.extractResult = extractResult;
+async function extractSingleResult(tool, path) {
+    const output = await fs_1.promises.readFile(path, 'utf8');
     let benches;
     switch (tool) {
         case 'cargo':
@@ -458,15 +472,9 @@ async function extractResult(config) {
             throw new Error(`FATAL: Unexpected tool: '${tool}'`);
     }
     if (benches.length === 0) {
-        throw new Error(`No benchmark result was found in ${config.outputFilePath}. Benchmark output was '${output}'`);
+        throw new Error(`No benchmark result was found in ${path}. Benchmark output was '${output}'`);
     }
-    const commit = await getCommit(githubToken, ref);
-    return {
-        commit,
-        date: Date.now(),
-        tool,
-        benches,
-    };
+    return benches;
 }
-exports.extractResult = extractResult;
+exports.extractSingleResult = extractSingleResult;
 //# sourceMappingURL=extract.js.map

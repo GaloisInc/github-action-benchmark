@@ -69,12 +69,33 @@ async function resolveFilePath(p) {
     }
     return p;
 }
-async function validateOutputFilePath(filePath) {
+function maybeJSON(s) {
     try {
-        return await resolveFilePath(filePath);
+        return JSON.parse(s);
     }
-    catch (err) {
-        throw new Error(`Invalid value for 'output-file-path' input: ${err}`);
+    catch (_) {
+        return null;
+    }
+}
+async function validateOutputFilePath(filePath) {
+    const jsonFilePaths = maybeJSON(filePath);
+    if (jsonFilePaths) {
+        const result = {};
+        for (const key in jsonFilePaths) {
+            const path = jsonFilePaths[key];
+            result[key] = await resolveFilePath(path);
+        }
+        return result;
+    }
+    else {
+        try {
+            return {
+                default: await resolveFilePath(filePath),
+            };
+        }
+        catch (err) {
+            throw new Error(`Invalid value for 'output-file-path' input: ${err}`);
+        }
     }
 }
 function validateGhPagesBranch(branch) {
@@ -196,7 +217,7 @@ function validateAlertThreshold(alertThreshold, failThreshold) {
 }
 async function configFromJobInput() {
     const tool = core.getInput('tool');
-    let outputFilePath = core.getInput('output-file-path');
+    const outputFilePathStr = core.getInput('output-file-path');
     const ghPagesBranch = core.getInput('gh-pages-branch');
     const ghRepository = core.getInput('gh-repository');
     let benchmarkDataDirPath = core.getInput('benchmark-data-dir-path');
@@ -216,7 +237,7 @@ async function configFromJobInput() {
     const maxItemsInChart = getUintInput('max-items-in-chart');
     let failThreshold = getPercentageInput('fail-threshold');
     validateToolType(tool);
-    outputFilePath = await validateOutputFilePath(outputFilePath);
+    const outputFilePath = await validateOutputFilePath(outputFilePathStr);
     validateGhPagesBranch(ghPagesBranch);
     benchmarkDataDirPath = validateBenchmarkDataDirPath(benchmarkDataDirPath);
     validateName(name);
