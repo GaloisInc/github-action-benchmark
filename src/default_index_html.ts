@@ -225,7 +225,14 @@ export const DEFAULT_INDEX_HTML = String.raw`<!DOCTYPE html>
               const color = colors.next().value[1];
               datasets.push({
                 label: series_name,
-                data: commits.map(commit => data.get(commit).bench.value),
+                data: commits.map(commit => {
+                  const b = data.get(commit);
+                  if (b) {
+                    return b.bench.value;
+                  } else {
+                    return null;
+                  }
+                }),
                 borderColor: color,
                 fill: false,
                 backgroundColor: color + '60', // Add alpha for #rrggbbaa
